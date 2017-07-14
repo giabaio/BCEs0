@@ -1,2 +1,2 @@
-# BCEs0
+# BCEs0[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/BCEs0)](https://cran.r-project.org/package=BCEs0)[![CRAN_Download_Badge](http://cranlogs.r-pkg.org/badges/BCEs0)](https://cran.r-project.org/package=BCEs0)
 Implements a full Bayesian cost-effectiveness analysis in the case where the cost variable is characterised by structural zeros. The package implements the Gamma, log-Normal and Normal models for the cost variable and the Gamma, Beta, Bernoulli and Normal models for the measure of clinical effectiveness. 
