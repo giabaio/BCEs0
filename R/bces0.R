@@ -1,4 +1,62 @@
 ### Defines the class
+
+
+#' Bayesian Cost-Effectiveness models in the presence of structural zeros
+#' 
+#' Writes a model file encoding the distributional assumptions, calls JAGS in
+#' background and perform the Bayesian analysis of the selected model.
+#' 
+#' 
+#' @aliases bces0 bces0.default
+#' @param data A named list including values for the variables e0 (measure of
+#' effectiveness for the subjects in treatment arm t=0), e1 (effectiveness for
+#' the subjects in t=1), c0 (individual costs in t=0), c1 (individual costs in
+#' t=1), H.psi and H.zeta (vectors of fixed hyperparameters for the prior in
+#' the positive cost groups. If only one value is passed as argument, then
+#' BCEs0 assumes that this is to be used for both treatments being considered).
+#' Additional optional elements are X0 (a matrix of covariates for t=0) and X1
+#' (a matrix of covariates for t=1) that can be used to estimate the selection
+#' model for null costs
+#' @param dist.c A text string defining the selected distribution for the
+#' costs. Available options are Gamma ("gamma"), log-Normal ("logn") and Normal
+#' ("norm")
+#' @param dist.e A text string defining the selected distribution for the
+#' measure of effectiveness.  Available options are Beta ("beta"), Gamma
+#' ("gamma"), Bernoulli ("bern") and Normal ("norm")
+#' @param w A parameter used to characterise the mean of the degenerate
+#' distribution for the structural zeros (default = 0.000001)
+#' @param W A parameter used to characterise the standard deviaiton of the
+#' degenerate distribution for the structural zeros (default = 0.000001)
+#' @param n.iter Number of iterations to be run in JAGS (default = 10000)
+#' @param n.burnin Number of iterations to be used as burn-in for the MCMC
+#' procedure (default = 5000)
+#' @param n.chains Number of Markov chains to be run (default = 2)
+#' @param robust A string indicating whether a robust model should be chosen
+#' for the patter model. If TRUE (default), then the regression coefficients
+#' are modelled using a Cauchy(0,2.5) distribution. If FALSE, then a vague
+#' Normal prior is used
+#' @param model.file A string with the name of the txt file to which the JAGS
+#' code is saved. Default is model.txt.
+#' @return An object containing the following elements \item{mod}{A "rjags"
+#' objects with the results of the MCMC simulations run using JAGS}
+#' \item{params}{A vector including the parameters being monitored}
+#' \item{dataJags}{A list contaning the data needed to run the MCMC
+#' simulations} \item{inits}{A function used to initialise the random nodes in
+#' the model}
+#' @author Gianluca Baio
+#' @references Baio G. (2013). Bayesian models for cost-effectiveness analysis
+#' in the presence of structural zero costs.
+#' http://arxiv.org/pdf/1307.5243v1.pdf
+#' @keywords JAGS Markov Chain Monte Carlo Bayesian models for
+#' cost-effectiveness analysis
+#' @examples
+#' 
+#' data(acupuncture)
+#' m <- bces0(data,dist.c="gamma",dist.e="beta",n.iter=1000,n.burnin=500,n.chains=2)
+#' print(m)
+#' plot(m)
+#' 
+#' @export bces0
 bces0 <- function(data,dist.c=c("gamma","logn","norm"),dist.e=c("beta","gamma","bern","norm"),
 w=1e-6,W=1e-6,n.iter=10000,n.burnin=5000,n.chains=2,robust=TRUE,model.file="model.txt") UseMethod("bces0")
 
@@ -50,7 +108,9 @@ w=1e-6,W=1e-6,n.iter=10000,n.burnin=5000,n.chains=2,robust=TRUE,model.file="mode
 # version 6 November 2013
 
 ## 0. Sets up the required path and libraries
-require(R2jags)
+if (!isTRUE(requireNamespace("R2jags", quietly = TRUE))) {
+            stop("You need to install the MCMC software 'JAGS' and the R package 'R2jags'.\nPlease see instructions at:\n'http://mcmc-jags.sourceforge.net/'\nand then run in your R terminal:\ninstall.packages('R2jags')")
+          }
 working.dir <- getwd()
 # checks that some covariates are available for the selection model
 chk <- is.null(data$X0) & is.null(data$X1)
@@ -164,7 +224,7 @@ n.iter <- n.iter				     # number of iterations
 n.burnin <- n.burnin				# number of burn-in
 n.thin <- floor((n.iter-n.burnin)/500)	# thinning so that 1000 iterations are stored
 n.chains <- n.chains				# number of Markov chains
-mod <- jags(dataJags, inits, params, model.file=model.file,
+mod <- R2jags::jags(dataJags, inits, params, model.file=model.file,
 	n.chains=n.chains, n.iter, n.burnin, n.thin,
 	DIC=TRUE, working.directory=working.dir, progress.bar="text")
 
@@ -177,12 +237,59 @@ out
 
 #####
 ## Print method for objects in the class bces0
+
+
+#' Print method for objects in the class "bces0"
+#' 
+#' Specific method for objects in the class BCEs0
+#' 
+#' Returns a summary table with selected statistics for all the nodes in the
+#' model that can be used to assess convergence
+#' 
+#' @param x The object in the class "BCEs0" obtained by calling the function
+#' bces0
+#' @param ...  Additional arguments affecting the summary produced
+#' @author Gianluca Baio
+#' @seealso \code{\link{bces0}}
+#' @references Baio G. (2013). Bayesian models for cost-effectiveness analysis
+#' in the presence of structural zero costs.
+#' http://arxiv.org/pdf/1307.5243v1.pdf
+#' @keywords JAGS Markov Chain Monte Carlo Bayesian models for
+#' cost-effectiveness analysis
+#' @examples
+#' 
+#' ## To be added here
+#' 
+#' @export print.bces0
 print.bces0 <- function(x,...){
 print(x$mod,interval=c(.025,.975),digit=3)	# prints the summary results
 }
 
 #####
 ## Traceplot method for objects in the class bces0
+
+
+#' Plot method for objects in the class "bces0"
+#' 
+#' Produces a traceplot for the main nodes in the model
+#' 
+#' Returns a traceplot to assess convergence
+#' 
+#' @param x The object in the class "BCEs0" obtained by calling the function
+#' bces0
+#' @param ...  Additional arguments affecting the summary produced
+#' @author Gianluca Baio
+#' @seealso \code{\link{bces0}}
+#' @references Baio G. (2013). Bayesian models for cost-effectiveness analysis
+#' in the presence of structural zero costs.
+#' http://arxiv.org/pdf/1307.5243v1.pdf
+#' @keywords JAGS Markov Chain Monte Carlo Bayesian models for
+#' cost-effectiveness analysis
+#' @examples
+#' 
+#' ## To be added here
+#' 
+#' @export plot.bces0
 plot.bces0 <- function(x,...){
 col <- colors()
 mdl <- x$mod$BUGSoutput
@@ -264,6 +371,43 @@ if (mdl$n.chains>=2) {
 
 
 #####
+
+
+#' writeModel
+#' 
+#' This function selects suitable bits of JAGS code to build the model file
+#' encoding the selected distributional assumptions for the cost and
+#' effectiveness variables (and for the selection model)
+#' 
+#' 
+#' @param dist.c A text string defining the selected distribution for the
+#' costs. Available options are Gamma ("gamma"), log-Normal ("logn") and Normal
+#' ("norm")
+#' @param dist.e A text string defining the selected distribution for the
+#' measure of effectiveness.  Available options are Beta ("beta"), Gamma
+#' ("gamma"), Bernoulli ("bern") and Normal ("norm")
+#' @param dist.d A text string defining the selection model. Possible choices
+#' are "cov.cauchy" or "cov.norm" (used when individual covariates are
+#' available and can be used to estimate the probability of zero costs) and
+#' "int" (when no covariate is available and an intercept-only model is
+#' fitted). The function writes a text file in the current working directory,
+#' including the relevant bits of code, that can be then passed to the call to
+#' the function jags to run the MCMC simulations in background
+#' @param model.file A string with the name of the model file to which the JAGS
+#' code is saved
+#' @return Writes out the file with the selected distributional assumptions to
+#' the file "model.txt" in the current working directory
+#' @author Gianluca Baio
+#' @seealso \code{\link{bces0}}
+#' @references Baio G. (2013). Bayesian models for cost-effectiveness analysis
+#' in the presence of structural zero costs.
+#' http://arxiv.org/pdf/1307.5243v1.pdf
+#' @keywords JAGS Bayesian models
+#' @examples
+#' 
+#' ## To be added here
+#' 
+#' @export writeModel
 writeModel <- function(dist.c,dist.e,dist.d,model.file) {
 ## Selects the modules in the model code, according to the distributional assumptions
 
